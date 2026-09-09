@@ -1,396 +1,450 @@
 import 'package:flutter/material.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(const ReservaViajeApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class ReservaViajeApp extends StatelessWidget {
+  const ReservaViajeApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Registro de Preferencias',
-      debugShowCheckedModeBanner: true,
+      title: 'Reserva de Viaje',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
       ),
-      home: const PreferencesScreen(),
+      home: const PantallaFormulario(),
     );
   }
 }
 
-class PreferencesScreen extends StatefulWidget {
-  const PreferencesScreen({super.key});
+// Modelo de datos para transferir la información a la Pantalla 2
+class DatosReserva {
+  final String nombre;
+  final String correo;
+  final String destino;
+  final String transporte;
+  final bool hotel;
+  final bool tour;
+  final bool seguro;
+  final bool notificaciones;
+  final double presupuesto;
+  final DateTime? fecha;
 
-  @override
-  State<PreferencesScreen> createState() => _PreferencesScreenState();
+  DatosReserva({
+    required this.nombre,
+    required this.correo,
+    required this.destino,
+    required this.transporte,
+    required this.hotel,
+    required this.tour,
+    required this.seguro,
+    required this.notificaciones,
+    required this.presupuesto,
+    required this.fecha,
+  });
 }
 
-class _PreferencesScreenState extends State<PreferencesScreen> {
-  // Controladores de texto
-  final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _ageController = TextEditingController();
+class PantallaFormulario extends StatefulWidget {
+  const PantallaFormulario({super.key});
 
-  // Estados de controles UI
-  String _selectedGender = 'Masculino';
-  bool _interestDeporte = false;
-  bool _interestMusica = false;
-  bool _interestCine = false;
-  bool _interestLectura = false;
-  String _selectedCountry = 'Mexico';
+  @override
+  State<PantallaFormulario> createState() => _PantallaFormularioState();
+}
 
-  final List<String> _countries = [
-    'Mexico',
-    'Colombia',
-    'Argentina',
-    'España',
-    'Chile',
-    'Peru',
-  ];
+class _PantallaFormularioState extends State<PantallaFormulario> {
+  // Sección 2: Controladores
+  final TextEditingController _nombreController = TextEditingController();
+  final TextEditingController _correoController = TextEditingController();
+
+  // Sección 3: Destino y transporte
+  String _destinoSeleccionado = 'Playa';
+  String _transporteSeleccionado = 'Avion';
+  final List<String> _opcionesTransporte = ['Avion', 'Autobus', 'Tren', 'Barco'];
+
+  // Sección 4: Extras y preferencias
+  bool _hotelIncluido = false;
+  bool _tourGuiado = false;
+  bool _seguroViaje = false;
+  bool _notificaciones = false;
+  double _presupuesto = 2000.0;
+  DateTime? _fechaViaje;
 
   @override
   void dispose() {
-    _nameController.dispose();
-    _ageController.dispose();
+    _nombreController.dispose();
+    _correoController.dispose();
     super.dispose();
+  }
+
+  // Función para mostrar SnackBars
+  void _mostrarSnackBar(String mensaje) {
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(mensaje),
+        duration: const Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  // Limpiar todos los inputs y widgets
+  void _limpiarFormulario() {
+    setState(() {
+      _nombreController.clear();
+      _correoController.clear();
+      _destinoSeleccionado = 'Playa';
+      _transporteSeleccionado = 'Avion';
+      _hotelIncluido = false;
+      _tourGuiado = false;
+      _seguroViaje = false;
+      _notificaciones = false;
+      _presupuesto = 2000.0;
+      _fechaViaje = null;
+    });
+    _mostrarSnackBar('Formulario reiniciado correctamente');
+  }
+
+  // Selector de fecha
+  Future<void> _seleccionarFecha() async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _fechaViaje ?? DateTime.now().add(const Duration(days: 1)),
+      firstDate: DateTime.now(),
+      lastDate: DateTime(2030),
+    );
+    if (picked != null && picked != _fechaViaje) {
+      setState(() {
+        _fechaViaje = picked;
+      });
+      _mostrarSnackBar(
+        'Fecha elegida: ${picked.day.toString().padLeft(2, '0')}/${picked.month.toString().padLeft(2, '0')}/${picked.year}',
+      );
+    }
+  }
+
+  // Modal para "Ver Resumen"
+  void _mostrarResumenModal() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Resumen Preliminar',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const Divider(),
+              Text('Viajero: ${_nombreController.text.isEmpty ? "Sin registrar" : _nombreController.text}'),
+              Text('Destino: $_destinoSeleccionado en $_transporteSeleccionado'),
+              Text('Presupuesto: \$${_presupuesto.toStringAsFixed(0)} MXN'),
+              Text('Fecha: ${_fechaViaje != null ? "${_fechaViaje!.day}/${_fechaViaje!.month}/${_fechaViaje!.year}" : "Pendiente"}'),
+              const SizedBox(height: 15),
+              Align(
+                alignment: Alignment.centerRight,
+                child: FilledButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cerrar'),
+                ),
+              )
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // Navegación a Pantalla 2 (Confirmar)
+  void _navegarABoleto() {
+    final reserva = DatosReserva(
+      nombre: _nombreController.text.trim().isEmpty ? 'Viajero Anónimo' : _nombreController.text.trim(),
+      correo: _correoController.text.trim().isEmpty ? 'No registrado' : _correoController.text.trim(),
+      destino: _destinoSeleccionado,
+      transporte: _transporteSeleccionado,
+      hotel: _hotelIncluido,
+      tour: _tourGuiado,
+      seguro: _seguroViaje,
+      notificaciones: _notificaciones,
+      presupuesto: _presupuesto,
+      fecha: _fechaViaje,
+    );
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PantallaBoleto(reserva: reserva),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFAF7FC),
+      backgroundColor: const Color(0xFFF4F6F9),
       appBar: AppBar(
-        title: const Text(
-          'Registro de Preferencias',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: Colors.blue,
-        elevation: 2,
+        title: const Text('Reserva de Viaje', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+        backgroundColor: Colors.blue.shade700,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.cleaning_services, color: Colors.white),
+            tooltip: 'Limpiar campos',
+            onPressed: _limpiarFormulario,
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
         child: Column(
           children: [
-            // Sección 1: Información General
-            _buildSectionCard(
-              borderColor: Colors.blue.shade100,
-              backgroundColor: const Color(0xFFEDF6FD),
+            // Sección 1 - Información general
+            _buildContainerTarjeta(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  Text(
+                    'Seccion 1 - Informacion general',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.blue),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'Completa tu reserva paso a paso',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black87),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    'Llena tus datos, elige destino y confirma tu viaje.',
+                    style: TextStyle(fontSize: 13, color: Colors.black54),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Sección 2 - Datos del viajero
+            _buildContainerTarjeta(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  const Text(
+                    'Sección 2 - Datos del viajero',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.blue),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _nombreController,
+                    decoration: const InputDecoration(
+                      labelText: 'Nombre completo',
+                      hintText: 'Ej: Ana Garcia',
+                      prefixIcon: Icon(Icons.person),
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _correoController,
+                    keyboardType: TextInputType.emailAddress,
+                    decoration: const InputDecoration(
+                      labelText: 'Correo electronico',
+                      hintText: 'Ej: ana@correo.com',
+                      prefixIcon: Icon(Icons.email),
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Sección 3 - Destino y transporte
+            _buildContainerTarjeta(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Sección 3 - Destino y transporte',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.blue),
+                  ),
+                  const SizedBox(height: 12),
                   Row(
                     children: [
-                      Icon(Icons.info_outline, color: Colors.blue.shade800, size: 22),
+                      _buildDestinoItem('Playa', Icons.beach_access, Colors.blue),
                       const SizedBox(width: 8),
-                      Text(
-                        'Seccion 1: Informacion General',
-                        style: TextStyle(
-                          color: Colors.blue.shade800,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
+                      _buildDestinoItem('Ciudad', Icons.location_city, Colors.orange),
+                      const SizedBox(width: 8),
+                      _buildDestinoItem('Montaña', Icons.landscape, Colors.green),
                     ],
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    value: _transporteSeleccionado,
+                    decoration: const InputDecoration(
+                      labelText: 'Medio de transporte',
+                      prefixIcon: Icon(Icons.commute),
+                      border: OutlineInputBorder(),
+                    ),
+                    items: _opcionesTransporte.map((String opcion) {
+                      return DropdownMenuItem<String>(
+                        value: opcion,
+                        child: Text(opcion),
+                      );
+                    }).toList(),
+                    onChanged: (String? nuevoValor) {
+                      if (nuevoValor != null) {
+                        setState(() => _transporteSeleccionado = nuevoValor);
+                        _mostrarSnackBar('Transporte seleccionado: $nuevoValor');
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Sección 4 - Extras y preferencias
+            _buildContainerTarjeta(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Sección 4 - Extras y preferencias',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.blue),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildCheckboxExtra(
+                    titulo: 'Hotel incluido (+ \$1200)',
+                    icono: Icons.hotel,
+                    valor: _hotelIncluido,
+                    onChanged: (val) {
+                      setState(() => _hotelIncluido = val ?? false);
+                      _mostrarSnackBar(_hotelIncluido ? 'Hotel añadido' : 'Hotel removido');
+                    },
                   ),
                   const SizedBox(height: 8),
-                  const Text(
-                    'Completa los siguientes datos personales basicos',
-                    style: TextStyle(color: Colors.grey, fontSize: 13),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            // Sección 2: Datos Personales
-            _buildSectionCard(
-              borderColor: Colors.green.shade200,
-              backgroundColor: const Color(0xFFF1F8F1),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.person, color: Colors.green.shade800, size: 22),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Seccion 2: Datos Personales',
-                        style: TextStyle(
-                          color: Colors.green.shade800,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  _buildInputBox(
-                    controller: _nameController,
-                    hintText: 'Nombre completo',
-                    icon: Icons.person,
-                  ),
-                  const SizedBox(height: 10),
-                  _buildInputBox(
-                    controller: _ageController,
-                    hintText: 'Edad',
-                    icon: Icons.calendar_today_outlined,
-                    keyboardType: TextInputType.number,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            // Sección 3: Distribución en Filas
-            _buildSectionCard(
-              borderColor: Colors.orange.shade200,
-              backgroundColor: const Color(0xFFFFF7EB),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.view_agenda, color: Colors.orange.shade800, size: 22),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Seccion 3: Distribucion en Filas',
-                        style: TextStyle(
-                          color: Colors.orange.shade800,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  _buildColorRow(
-                    dotColor: Colors.redAccent,
-                    bgColor: const Color(0xFFFFD9DF),
-                    text: 'Fila 1 - Color Rojo',
+                  _buildCheckboxExtra(
+                    titulo: 'Tour guiado (+ \$600)',
+                    icono: Icons.tour,
+                    valor: _tourGuiado,
+                    onChanged: (val) {
+                      setState(() => _tourGuiado = val ?? false);
+                      _mostrarSnackBar(_tourGuiado ? 'Tour guiado añadido' : 'Tour guiado removido');
+                    },
                   ),
                   const SizedBox(height: 8),
-                  _buildColorRow(
-                    dotColor: Colors.amber,
-                    bgColor: const Color(0xFFFFF9D2),
-                    text: 'Fila 2 - Color Amarillo',
-                  ),
-                  const SizedBox(height: 8),
-                  _buildColorRow(
-                    dotColor: Colors.blue,
-                    bgColor: const Color(0xFFCDE8FD),
-                    text: 'Fila 3 - Color Azul',
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            // Sección 4: Cuatro Hijos en Colores
-            _buildSectionCard(
-              borderColor: Colors.purple.shade200,
-              backgroundColor: const Color(0xFFF9EEF9),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.grid_view_rounded, color: Colors.purple.shade800, size: 22),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Seccion 4: Cuatro Hijos en Colores',
-                        style: TextStyle(
-                          color: Colors.purple.shade800,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ],
+                  _buildCheckboxExtra(
+                    titulo: 'Seguro de viaje (+ \$400)',
+                    icono: Icons.health_and_safety,
+                    valor: _seguroViaje,
+                    onChanged: (val) {
+                      setState(() => _seguroViaje = val ?? false);
+                      _mostrarSnackBar(_seguroViaje ? 'Seguro añadido' : 'Seguro removido');
+                    },
                   ),
                   const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildChildBox(
-                          text: 'Hijo 1',
-                          bgColor: const Color(0xFFF7B7C6),
-                          textColor: const Color(0xFF9E2A4B),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _buildChildBox(
-                          text: 'Hijo 2',
-                          bgColor: const Color(0xFFFFDF9E),
-                          textColor: const Color(0xFF9B6817),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _buildChildBox(
-                          text: 'Hijo 3',
-                          bgColor: const Color(0xFFBCE7C7),
-                          textColor: const Color(0xFF26733B),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _buildChildBox(
-                          text: 'Hijo 4',
-                          bgColor: const Color(0xFFC7BFE6),
-                          textColor: const Color(0xFF4A3E7B),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            // Sección 5: Controles UI
-            _buildSectionCard(
-              borderColor: Colors.grey.shade300,
-              backgroundColor: const Color(0xFFF7F7F8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.add_circle_outline, color: Colors.grey.shade800, size: 22),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Seccion 5: Controles UI',
-                        style: TextStyle(
-                          color: Colors.grey.shade800,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-
-                  // Radio buttons (Género)
-                  const Text(
-                    'Genero:',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                  ),
-                  _buildRadioOption('Masculino'),
-                  _buildRadioOption('Femenino'),
-                  _buildRadioOption('Otro'),
-
-                  const SizedBox(height: 12),
-
-                  // Checkboxes (Intereses)
-                  const Text(
-                    'Intereses:',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                  ),
-                  _buildCheckboxOption(
-                    label: 'Deporte',
-                    value: _interestDeporte,
-                    onChanged: (val) => setState(() => _interestDeporte = val ?? false),
-                  ),
-                  _buildCheckboxOption(
-                    label: 'Musica',
-                    value: _interestMusica,
-                    onChanged: (val) => setState(() => _interestMusica = val ?? false),
-                  ),
-                  _buildCheckboxOption(
-                    label: 'Cine',
-                    value: _interestCine,
-                    onChanged: (val) => setState(() => _interestCine = val ?? false),
-                  ),
-                  _buildCheckboxOption(
-                    label: 'Lectura',
-                    value: _interestLectura,
-                    onChanged: (val) => setState(() => _interestLectura = val ?? false),
-                  ),
-
-                  const SizedBox(height: 14),
-
-                  // Dropdown (País)
-                  const Text(
-                    'Pais:',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                  ),
-                  const SizedBox(height: 6),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12.0),
                     decoration: BoxDecoration(
-                      color: Colors.white,
-                      border: Border.all(color: Colors.black54),
-                      borderRadius: BorderRadius.circular(4.0),
+                      color: _notificaciones ? Colors.blue.shade50 : Colors.white,
+                      border: Border.all(color: Colors.grey.shade300),
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                        value: _selectedCountry,
-                        isExpanded: true,
-                        icon: const Icon(Icons.arrow_drop_down),
-                        items: _countries.map((String country) {
-                          return DropdownMenuItem<String>(
-                            value: country,
-                            child: Row(
-                              children: [
-                                const Icon(Icons.public, size: 20, color: Colors.black87),
-                                const SizedBox(width: 8),
-                                Text(country),
-                              ],
-                            ),
-                          );
-                        }).toList(),
-                        onChanged: (String? newValue) {
-                          if (newValue != null) {
-                            setState(() => _selectedCountry = newValue);
-                          }
-                        },
-                      ),
+                    child: SwitchListTile(
+                      title: const Text('Recibir notificaciones', style: TextStyle(fontWeight: FontWeight.w600)),
+                      subtitle: Text(_notificaciones ? 'Activadas' : 'Desactivadas'),
+                      value: _notificaciones,
+                      onChanged: (bool val) {
+                        setState(() => _notificaciones = val);
+                        _mostrarSnackBar(val ? 'Notificaciones activadas' : 'Notificaciones desactivadas');
+                      },
                     ),
                   ),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Presupuesto:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                      Text(
+                        '\$${_presupuesto.toStringAsFixed(0)} MXN',
+                        style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blue, fontSize: 15),
+                      ),
+                    ],
+                  ),
+                  Slider(
+                    value: _presupuesto,
+                    min: 500,
+                    max: 10000,
+                    divisions: 20,
+                    label: _presupuesto.round().toString(),
+                    onChanged: (double val) {
+                      setState(() => _presupuesto = val);
+                    },
+                  ),
+                  const Divider(),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.calendar_month, color: Colors.blue, size: 28),
+                    title: const Text('Fecha del viaje', style: TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: Text(
+                      _fechaViaje == null
+                          ? 'Toca para elegir fecha'
+                          : '${_fechaViaje!.day.toString().padLeft(2, '0')}/${_fechaViaje!.month.toString().padLeft(2, '0')}/${_fechaViaje!.year}',
+                      style: TextStyle(
+                        color: _fechaViaje == null ? Colors.grey : Colors.black87,
+                        fontWeight: _fechaViaje == null ? FontWeight.normal : FontWeight.w600,
+                      ),
+                    ),
+                    onTap: _seleccionarFecha,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
 
-                  // Botones de acción inferiores
+            // Sección 5 - Confirmar
+            _buildContainerTarjeta(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Seccion 5 - Confirmar',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.blue),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Revisa tus datos antes de despegar',
+                    style: TextStyle(fontSize: 13, color: Colors.black54),
+                  ),
+                  const SizedBox(height: 16),
                   Row(
                     children: [
                       Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: _showPreferencesDialog,
-                          icon: const Icon(Icons.visibility, size: 18, color: Colors.white),
-                          label: const Text(
-                            'Mostrar Preferencias',
-                            style: TextStyle(fontSize: 12, color: Colors.white),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blue,
+                        child: OutlinedButton(
+                          onPressed: _mostrarResumenModal,
+                          style: OutlinedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
                           ),
+                          child: const Text('Ver Resumen'),
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 12),
                       Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Registro guardado correctamente')),
-                            );
-                          },
-                          icon: const Icon(Icons.check_circle, size: 18, color: Colors.white),
-                          label: const Text(
-                            'Guardar Registro',
-                            style: TextStyle(fontSize: 12, color: Colors.white),
-                          ),
+                        child: ElevatedButton(
+                          onPressed: _navegarABoleto,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF4CAF50),
+                            backgroundColor: Colors.blue.shade700,
+                            foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
                           ),
+                          child: const Text('Confirmar'),
                         ),
                       ),
                     ],
@@ -405,189 +459,192 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
     );
   }
 
-  // Tarjeta contenedora de cada sección
-  Widget _buildSectionCard({
-    required Widget child,
-    required Color borderColor,
-    required Color backgroundColor,
-  }) {
+  // Tarjeta general para unificar el diseño de cada sección
+  Widget _buildContainerTarjeta({required Widget child}) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(14.0),
       decoration: BoxDecoration(
-        color: backgroundColor,
-        border: Border.all(color: borderColor, width: 1.2),
-        borderRadius: BorderRadius.circular(14.0),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: child,
     );
   }
 
-  // Campo de texto personalizado
-  Widget _buildInputBox({
-    required TextEditingController controller,
-    required String hintText,
-    required IconData icon,
-    TextInputType keyboardType = TextInputType.text,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: Colors.black54),
-        borderRadius: BorderRadius.circular(4.0),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      child: TextField(
-        controller: controller,
-        keyboardType: keyboardType,
-        decoration: InputDecoration(
-          icon: Icon(icon, color: Colors.black87, size: 20),
-          hintText: hintText,
-          border: InputBorder.none,
-          isDense: true,
-          contentPadding: const EdgeInsets.symmetric(vertical: 10),
-        ),
-      ),
-    );
-  }
-
-  // Fila de la Sección 3
-  Widget _buildColorRow({
-    required Color dotColor,
-    required Color bgColor,
-    required String text,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 18,
-            height: 18,
-            decoration: BoxDecoration(color: dotColor, shape: BoxShape.circle),
-          ),
-          const SizedBox(width: 10),
-          Text(
-            text,
-            style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Elemento Hijo de la Sección 4
-  Widget _buildChildBox({
-    required String text,
-    required Color bgColor,
-    required Color textColor,
-  }) {
-    return Container(
-      height: 48,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(
-          color: textColor,
-          fontWeight: FontWeight.w600,
-          fontSize: 12,
-        ),
-      ),
-    );
-  }
-
-  // Radio button con espaciado compacto
-  Widget _buildRadioOption(String value) {
-    return InkWell(
-      onTap: () => setState(() => _selectedGender = value),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 2.0),
-        child: Row(
-          children: [
-            Radio<String>(
-              value: value,
-              groupValue: _selectedGender,
-              activeColor: Colors.deepPurple,
-              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              visualDensity: VisualDensity.compact,
-              onChanged: (val) {
-                if (val != null) setState(() => _selectedGender = val);
-              },
+  // Tarjeta de selección individual para la Sección 3
+  Widget _buildDestinoItem(String nombre, IconData icono, Color colorBase) {
+    final bool seleccionado = _destinoSeleccionado == nombre;
+    return Expanded(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: () {
+          setState(() => _destinoSeleccionado = nombre);
+          _mostrarSnackBar('Destino seleccionado: $nombre');
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          decoration: BoxDecoration(
+            color: seleccionado ? colorBase.withOpacity(0.15) : Colors.grey.shade50,
+            border: Border.all(
+              color: seleccionado ? colorBase : Colors.grey.shade300,
+              width: seleccionado ? 2 : 1,
             ),
-            const SizedBox(width: 8),
-            Text(value, style: const TextStyle(fontSize: 13)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // Checkbox con espaciado compacto
-  Widget _buildCheckboxOption({
-    required String label,
-    required bool value,
-    required ValueChanged<bool?> onChanged,
-  }) {
-    return InkWell(
-      onTap: () => onChanged(!value),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 2.0),
-        child: Row(
-          children: [
-            Checkbox(
-              value: value,
-              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              visualDensity: VisualDensity.compact,
-              onChanged: onChanged,
-            ),
-            const SizedBox(width: 8),
-            Text(label, style: const TextStyle(fontSize: 13)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // Diálogo para el botón "Mostrar Preferencias"
-  void _showPreferencesDialog() {
-    List<String> selectedInterests = [];
-    if (_interestDeporte) selectedInterests.add('Deporte');
-    if (_interestMusica) selectedInterests.add('Música');
-    if (_interestCine) selectedInterests.add('Cine');
-    if (_interestLectura) selectedInterests.add('Lectura');
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Preferencias Registradas'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Column(
             children: [
-              Text('Nombre: ${_nameController.text.isEmpty ? "No especificado" : _nameController.text}'),
-              Text('Edad: ${_ageController.text.isEmpty ? "No especificada" : _ageController.text}'),
-              Text('Género: $_selectedGender'),
-              Text('Intereses: ${selectedInterests.isEmpty ? "Ninguno" : selectedInterests.join(', ')}'),
-              Text('País: $_selectedCountry'),
+              Icon(icono, color: seleccionado ? colorBase : Colors.grey.shade700, size: 28),
+              const SizedBox(height: 6),
+              Text(
+                nombre,
+                style: TextStyle(
+                  fontWeight: seleccionado ? FontWeight.bold : FontWeight.normal,
+                  color: seleccionado ? colorBase : Colors.black87,
+                ),
+              ),
             ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cerrar'),
-            ),
-          ],
-        );
-      },
+        ),
+      ),
+    );
+  }
+
+  // Checkbox con cambio dinámico de color para la Sección 4
+  Widget _buildCheckboxExtra({
+    required String titulo,
+    required IconData icono,
+    required bool valor,
+    required ValueChanged<bool?> onChanged,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: valor ? Colors.blue.shade50 : Colors.white,
+        border: Border.all(
+          color: valor ? Colors.blue.shade300 : Colors.grey.shade300,
+        ),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: CheckboxListTile(
+        secondary: Icon(icono, color: valor ? Colors.blue : Colors.grey.shade600),
+        title: Text(
+          titulo,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: valor ? FontWeight.w600 : FontWeight.normal,
+          ),
+        ),
+        value: valor,
+        onChanged: onChanged,
+        controlAffinity: ListTileControlAffinity.trailing,
+      ),
+    );
+  }
+}
+
+// Pantalla 2: Boleto de Confirmación
+class PantallaBoleto extends StatelessWidget {
+  final DatosReserva reserva;
+
+  const PantallaBoleto({super.key, required this.reserva});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF0F4F8),
+      appBar: AppBar(
+        title: const Text('Mi Boleto', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+        backgroundColor: Colors.blue.shade700,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            children: [
+              Card(
+                elevation: 4,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                child: Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'PASE DE ABORDAJE',
+                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey),
+                          ),
+                          Icon(Icons.confirmation_number_outlined, color: Colors.blue.shade700),
+                        ],
+                      ),
+                      const Divider(height: 24),
+                      _buildDatoBoleto('Pasajero', reserva.nombre),
+                      _buildDatoBoleto('Contacto', reserva.correo),
+                      _buildDatoBoleto('Destino', reserva.destino),
+                      _buildDatoBoleto('Medio de transporte', reserva.transporte),
+                      _buildDatoBoleto(
+                        'Fecha',
+                        reserva.fecha != null
+                            ? '${reserva.fecha!.day.toString().padLeft(2, '0')}/${reserva.fecha!.month.toString().padLeft(2, '0')}/${reserva.fecha!.year}'
+                            : 'Fecha abierta',
+                      ),
+                      _buildDatoBoleto('Presupuesto asignado', '\$${reserva.presupuesto.toStringAsFixed(0)} MXN'),
+                      const Divider(height: 24),
+                      const Text(
+                        'Servicios adicionales:',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                      ),
+                      const SizedBox(height: 6),
+                      Text('• Hotel: ${reserva.hotel ? "Incluido" : "No"}'),
+                      Text('• Tour guiado: ${reserva.tour ? "Incluido" : "No"}'),
+                      Text('• Seguro de viaje: ${reserva.seguro ? "Incluido" : "No"}'),
+                      Text('• Notificaciones: ${reserva.notificaciones ? "Activadas" : "Desactivadas"}'),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.arrow_back),
+                label: const Text('Regresar'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue.shade700,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDatoBoleto(String etiqueta, String valor) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(etiqueta, style: const TextStyle(color: Colors.black54, fontSize: 13)),
+          Text(valor, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+        ],
+      ),
     );
   }
 }
