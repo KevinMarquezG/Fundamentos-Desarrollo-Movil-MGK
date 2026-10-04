@@ -33,7 +33,7 @@ class Game {
     final status = json['status']?['type'] ?? {};
 
     return Game(
-      id: json['id'] ?? '',
+      id: json['id']?.toString() ?? '',
       name: json['name'] ?? '',
       shortName: json['shortName'] ?? '',
       statusDetail: status['detail'] ?? 'Programado',
@@ -76,8 +76,43 @@ class TeamCompetitor {
       abbreviation: team['abbreviation'] ?? '',
       displayName: team['displayName'] ?? '',
       logoUrl: team['logo'] ?? '',
-      score: json['score'] ?? '0',
+      score: json['score']?.toString() ?? '0',
       record: recordSummary,
+    );
+  }
+}
+
+class Play {
+  final String id;
+  final String text;
+  final String clock;
+  final int period;
+  final String typeText;
+  final bool isScoringPlay;
+  final String awayScore;
+  final String homeScore;
+
+  Play({
+    required this.id,
+    required this.text,
+    required this.clock,
+    required this.period,
+    required this.typeText,
+    required this.isScoringPlay,
+    required this.awayScore,
+    required this.homeScore,
+  });
+
+  factory Play.fromJson(Map<String, dynamic> json) {
+    return Play(
+      id: json['id']?.toString() ?? '',
+      text: json['text'] ?? '',
+      clock: json['clock']?['displayValue'] ?? '',
+      period: json['period']?['number'] ?? 0,
+      typeText: json['type']?['text'] ?? 'Jugada',
+      isScoringPlay: json['scoringPlay'] ?? false,
+      awayScore: json['awayScore']?.toString() ?? '0',
+      homeScore: json['homeScore']?.toString() ?? '0',
     );
   }
 }
