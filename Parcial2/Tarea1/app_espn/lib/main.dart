@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'espn_service.dart';
 import 'game_models.dart';
+import 'game_detail_screen.dart';
 
 void main() {
   runApp(const NflScoresApp());
@@ -34,33 +35,64 @@ class ScoreboardScreen extends StatefulWidget {
 class _ScoreboardScreenState extends State<ScoreboardScreen> {
   final EspnService _service = EspnService();
   late Future<List<Game>> _gamesFuture;
+  DateTime _selectedDate = DateTime.now();
 
   @override
   void initState() {
     super.initState();
-    _loadGames();
+    _fetchGames();
   }
 
-  void _loadGames() {
+  void _fetchGames() {
     setState(() {
-      _gamesFuture = _service.fetchNflGames();
+      _gamesFuture = _service.fetchNflGames(date: _selectedDate);
     });
+  }
+
+  Future<void> _selectDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
+    );
+    if (picked != null && picked != _selectedDate) {
+      setState(() {
+        _selectedDate = picked;
+      });
+      _fetchGames();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final dateLabel =
+        '${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}';
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('NFL Scores & Matchups'),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('NFL Scoreboard', style: TextStyle(fontSize: 18)),
+            Text(dateLabel, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+          ],
+        ),
         actions: [
           IconButton(
+            tooltip: 'Cambiar Fecha',
+            icon: const Icon(Icons.calendar_month),
+            onPressed: _selectDate,
+          ),
+          IconButton(
+            tooltip: 'Refrescar',
             icon: const Icon(Icons.refresh),
-            onPressed: _loadGames,
+            onPressed: _fetchGames,
           ),
         ],
       ),
       body: RefreshIndicator(
-        onRefresh: () async => _loadGames(),
+        onRefresh: () async => _fetchGames(),
         child: FutureBuilder<List<Game>>(
           future: _gamesFuture,
           builder: (context, snapshot) {
@@ -79,13 +111,26 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
 
             final games = snapshot.data ?? [];
             if (games.isEmpty) {
-              return const Center(child: Text('No hay partidos disponibles.'));
+              return const Center(child: Text('No hay partidos para esta fecha.'));
             }
 
             return ListView.builder(
               padding: const EdgeInsets.symmetric(vertical: 8),
               itemCount: games.length,
-              itemBuilder: (context, index) => GameCard(game: games[index]),
+              itemBuilder: (context, index) {
+                final game = games[index];
+                return InkWell(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => GameDetailScreen(game: game),
+                      ),
+                    );
+                  },
+                  child: GameCard(game: game),
+                );
+              },
             );
           },
         ),
@@ -96,7 +141,6 @@ class _ScoreboardScreenState extends State<ScoreboardScreen> {
 
 class GameCard extends StatelessWidget {
   final Game game;
-
   const GameCard({super.key, required this.game});
 
   @override
@@ -109,18 +153,24 @@ class GameCard extends StatelessWidget {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            Text(
-              game.statusDetail,
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: game.isCompleted ? Colors.grey : Colors.amberAccent,
-                fontSize: 12,
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  game.statusDetail,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: game.isCompleted ? Colors.grey : Colors.amberAccent,
+                    fontSize: 12,
+                  ),
+                ),
+                const Icon(Icons.chevron_right, size: 18, color: Colors.grey),
+              ],
             ),
             const SizedBox(height: 12),
-            _TeamRow(team: game.awayTeam, isHome: false),
+            _TeamRow(team: game.awayTeam),
             const Divider(height: 16),
-            _TeamRow(team: game.homeTeam, isHome: true),
+            _TeamRow(team: game.homeTeam),
           ],
         ),
       ),
@@ -130,9 +180,7 @@ class GameCard extends StatelessWidget {
 
 class _TeamRow extends StatelessWidget {
   final TeamCompetitor team;
-  final bool isHome;
-
-  const _TeamRow({required this.team, required this.isHome});
+  const _TeamRow({required this.team});
 
   @override
   Widget build(BuildContext context) {
