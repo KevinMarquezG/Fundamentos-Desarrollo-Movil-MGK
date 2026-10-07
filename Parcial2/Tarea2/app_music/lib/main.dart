@@ -9,7 +9,7 @@ Future<void> main() async {
   // Reemplaza con tus credenciales de Supabase
   await Supabase.initialize(
     url: 'https://ozyweptoihsrbrtnykbw.supabase.co',
-    anonKey: 'sb_publishable_ncw8tvSMk1jBtEX-K2Y8Ew_9Bxwd_bC',
+    publishableKey: 'sb_publishable_ncw8tvSMk1jBtEX-K2Y8Ew_9Bxwd_bC',
   );
 
   runApp(const MusicApp());
